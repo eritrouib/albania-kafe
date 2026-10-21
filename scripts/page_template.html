@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Albania Bar-Kafe · Mapped</title>
+<meta name="description" content="Can you draw Albania with its bar-kafe? A data story about cafés, restaurants and byrektore, and what Albania publishes about them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Commissioner:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#13171D; --bg-2:#1A1F27; --card:#1F252E; --rule:#2C333E;
+  --ink:#F1ECE2; --ink-2:#C4BDB0; --ink-3:#8E887E;
+  --kafe:#C2841C; --byrek:#D4507A; --rest:#3F8FD9; --other:#5C626C; --glow:#F4B544;
+  --loss-1:#5A3530; --loss-2:#8E4235; --loss-3:#C4523C; --loss-4:#EE6B4D; --mid:#4A4C52; --gain:#3BA39A;
+  --seq-1:#1E2833; --seq-2:#263E4E; --seq-3:#2F5869; --seq-4:#3A7585; --seq-5:#4A95A3;
+  --serif:"Fraunces", Georgia, serif; --sans:"Commissioner", system-ui, sans-serif;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.6}
+a{color:var(--glow)}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+.wide{max-width:1100px;margin:0 auto;padding:0 16px}
+header.top{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto;padding:14px 16px;font-size:14px;color:var(--ink-3)}
+header.top a{color:var(--ink-2);text-decoration:none}
+.hero{position:relative;height:min(calc(100vh - 52px),980px);min-height:600px;overflow:hidden}
+#heroCanvas{position:absolute;inset:0;width:100%;height:100%}
+.hero-text{position:absolute;left:max(16px,calc(50% - 540px));top:12%;max-width:400px;z-index:2}
+.kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--glow);font-weight:600}
+h1{font-family:var(--serif);font-weight:800;font-size:clamp(38px,5.2vw,62px);line-height:1.02;margin:.25em 0 .3em;letter-spacing:-.01em}
+.dek{font-size:19px;color:var(--ink-2);max-width:400px}
+.hero-legend{position:absolute;left:max(16px,calc(50% - 540px));bottom:12%;z-index:2;font-size:14px;color:var(--ink-2)}
+.hero-legend div{margin:4px 0}.hero-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+.scrollhint{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);color:var(--ink-3);font-size:13px}
+@media (max-width:700px){.hero-text{top:4%;right:16px}.dek{font-size:16px;max-width:280px}.hero-legend,.scrollhint{display:none}}
+section{padding:56px 0 24px}
+h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4vw,38px);line-height:1.15;margin:0 0 .5em}
+h2 small{display:block;font-family:var(--sans);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:.6em}
+p{margin:0 0 1em;color:var(--ink-2)} p strong{color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:28px 0}
+.stat{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+.stat b{display:block;font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.1}
+.stat span{font-size:14px;color:var(--ink-3)}
+figure{margin:28px 0}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:8px}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart text{fill:var(--ink-3);font-family:var(--sans);font-size:12px}
+.chart .lbl{fill:var(--ink-2);font-size:13px}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin:6px 0 4px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.tip{position:fixed;pointer-events:none;background:#0E1014;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--ink);z-index:1000;opacity:0;transition:opacity .1s;max-width:260px;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.note{border-left:3px solid var(--glow);background:var(--bg-2);padding:12px 16px;border-radius:0 8px 8px 0;font-size:15px;color:var(--ink-2);margin:20px 0}
+table.cmp{width:100%;border-collapse:collapse;font-size:15px;margin:20px 0}
+table.cmp th,table.cmp td{padding:10px 8px;border-bottom:1px solid var(--rule);vertical-align:top;text-align:left;color:var(--ink-2)}
+table.cmp th{color:var(--ink-3);font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+table.cmp td:first-child{color:var(--ink);font-weight:500;width:28%}
+.ok{color:var(--gain)} .no{color:var(--loss-4)}
+ol.names{list-style:none;padding:0;margin:20px 0;counter-reset:s;columns:2;column-gap:28px}
+ol.names li{break-inside:avoid;display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--rule);counter-increment:s}
+ol.names li::before{content:counter(s);font-family:var(--serif);color:var(--ink-3)}
+ol.names .nm{color:var(--ink)} ol.names .sub{display:block;font-size:13px;color:var(--ink-3)}
+ol.names .n{font-family:var(--serif);font-size:20px;color:var(--glow)}
+@media (max-width:600px){ol.names{columns:1}}
+.explorer{display:grid;grid-template-columns:300px 1fr;border:1px solid var(--rule);border-radius:14px;overflow:hidden;background:var(--bg-2);min-height:640px}
+.panel{padding:18px;border-right:1px solid var(--rule);font-size:14px;color:var(--ink-2)}
+.panel label{display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer}
+.panel select{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:7px;font:14px var(--sans)}
+.panel .grp{margin:0 0 18px}
+.panel .grp > b{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.ramp{display:flex;height:10px;border-radius:4px;overflow:hidden;margin:8px 0 2px}
+.ramp i{flex:1}
+.ramp-l{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3)}
+#unitBox{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:12px;display:none}
+#unitBox h4{margin:0 0 6px;font-family:var(--serif);font-size:18px;color:var(--ink);font-weight:600}
+#unitBox .row{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+#map{min-height:640px;background:#0F1115}
+.leaflet-container{font-family:var(--sans)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0E1014;color:var(--ink);border:1px solid var(--rule)}
+.leaflet-popup-content{margin:10px 12px;font-size:13px}
+.leaflet-control-attribution{background:rgba(15,17,21,.8)!important;color:var(--ink-3)!important}
+.leaflet-control-attribution a{color:var(--ink-2)!important}
+@media (max-width:820px){.explorer{grid-template-columns:1fr}.panel{border-right:0;border-bottom:1px solid var(--rule)}#map{min-height:480px}}
+footer{border-top:1px solid var(--rule);margin-top:60px;padding:30px 0 60px;font-size:14px;color:var(--ink-3)}
+footer h3{font-family:var(--serif);color:var(--ink);font-weight:600;font-size:20px}
+footer p{color:var(--ink-3)}
+details{margin:12px 0}summary{cursor:pointer;color:var(--ink-2);font-size:14px}
+table.data{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+table.data td,table.data th{padding:4px 6px;border-bottom:1px solid var(--rule);text-align:right}
+table.data td:first-child,table.data th:first-child{text-align:left}
+</style>
+</head>
+<body>
+<header class="top"><a href="https://etymo.co.uk">@ET · Data, maps and decisions</a><span>October 2026</span></header>
+
+<div class="hero">
+  <canvas id="heroCanvas" aria-label="A map of Albania drawn only with dots, one for every café, bar and restaurant"></canvas>
+  <div class="hero-text">
+    <div class="kicker">A data story about bar-kafe</div>
+    <h1>Can you draw Albania with its bar-kafe?</h1>
+    <p class="dek">After the UK pubs and the Greek tavernas, I couldn't leave out Albania, my country of origin.</p>
+  </div>
+  <div class="hero-legend">
+    <div><i style="background:var(--kafe)"></i><span id="hKafe">3,922</span> bar-kafe</div>
+    <div><i style="background:var(--byrek)"></i><span id="hByrek">169</span> byrektore, zgara and qebaptore</div>
+    <div><i style="background:var(--rest)"></i><span id="hRest">2,345</span> restaurants and tavernas</div>
+    <div><i style="background:var(--other)"></i>pizza and fast food</div>
+  </div>
+  <div class="scrollhint">Scroll for the story ↓</div>
+</div>
+
+<main>
+<section class="wrap" id="s-map">
+  <h2><small>1 · The map</small>Albania, drawn with bar-kafe</h2>
+  <p>In the UK it's the pub, in Greece the taverna. In Albania it can only be the bar-kafe. There's one on every corner, from Tirana to the smallest village, and it's where people meet, talk and spend hours over one coffee.</p>
+  <p>Like for Greece, I used OpenStreetMap. I downloaded every café, bar, restaurant and fast food place in Albania, <strong id="nOsm">7,472</strong> of them, and sorted them into bar-kafe, restaurants, the traditional byrektore, zgara and qebaptore, and pizza and fast food. Tirana, the coast and Shkodër light up the most.</p>
+  <div class="stats" id="stats1"></div>
+</section>
+
+<section class="wrap" id="s-data">
+  <h2><small>2 · Finding the data</small>Easier than Greece, but not by much</h2>
+  <p>INSTAT, the Albanian statistics office, was easy to reach, and its tables download straight away. The problem is what's in them. Cafés, bars and restaurants are always counted together with hotels, as "accommodation and food services", so I couldn't find a separate count of cafés anywhere. By municipality, INSTAT only splits businesses into "goods" and "services". The last time cafés, restaurants and hotels were counted by county was the 2010 enterprise census.</p>
+  <table class="cmp">
+    <tr><th></th><th>UK</th><th>Greece</th><th>Albania</th></tr>
+    <tr><td>A list of every place, with its location</td><td class="ok">Yes, the food hygiene register</td><td class="no">No</td><td class="no">No</td></tr>
+    <tr><td>Bars and cafés counted on their own</td><td class="ok">Yes, pubs and bars by council</td><td class="ok">Yes, nationally and by area</td><td class="no">No, only together with hotels and restaurants</td></tr>
+    <tr><td>By area</td><td class="ok">Every year since 2001</td><td>Since 2016</td><td class="no">Only the 2010 census</td></tr>
+    <tr><td>OpenStreetMap download</td><td>Not needed</td><td class="no">Crashed my computer</td><td class="ok">Worked first time 😄</td></tr>
+  </table>
+</section>
+
+<section class="wrap" id="s-trend">
+  <h2><small>3 · The numbers</small>Down, then back up after COVID</h2>
+  <p>INSTAT's business survey counts the businesses in accommodation and food services every year. In 2016 there were <strong id="e16">20,043</strong>. The number fell every year to <strong id="e21">16,216</strong> in 2021, then started to recover. The business register, which counts a little differently, shows <strong id="r25">18,426</strong> at the end of 2025. Unlike the UK pubs, here you can see the COVID dip.</p>
+  <figure>
+    <div class="legend" id="legNat"></div>
+    <svg class="chart" id="chartNat" viewBox="0 0 680 290" role="img" aria-label="Line chart of Albanian accommodation and food businesses, 2016 to 2025"></svg>
+    <figcaption>Enterprises in accommodation and food services (NACE 55 and 56), INSTAT Structural Business Survey 2016–2024, and active legal units in the business register 2021–2025. Both include hotels.</figcaption>
+  </figure>
+  <p>The number of people working in them went up from about 52,000 to 56,000, while the number of businesses went down. That's the same as in the UK and Greece again: fewer places, but bigger ones.</p>
+</section>
+
+<section class="wrap" id="s-coverage">
+  <h2><small>4 · On the map</small>What's on the map, against the last count</h2>
+  <p>Since the last count by county is from 2010, I compared that with OpenStreetMap today. Overall, the map has about half as many places as the 2010 census counted (7,472 against 15,308, which also includes hotels). But Shkodër and Kukës have more on the map today than were counted in 2010, so someone has mapped them very carefully. Tirana has only <strong>38%</strong>, and Durrës and Fier about a third.</p>
+  <figure>
+    <div class="legend"><span><i style="background:var(--glow)"></i>Places in OpenStreetMap today per hotel, café or restaurant counted in 2010</span></div>
+    <svg class="chart" id="chartCov" viewBox="0 0 680 300" role="img" aria-label="Dot chart of OpenStreetMap places against the 2010 census by county"></svg>
+    <figcaption>OpenStreetMap restaurants, cafés, bars and fast food (October 2026) divided by "hotels, cafés, restaurants" local units in the 2010 enterprise census (INSTAT). Sixteen years apart, so read it as a rough guide.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap" id="s-names">
+  <h2><small>5 · Names</small>Albania's Red Lion is called "Bar Kafe"</h2>
+  <p>The fun part again was the names. The UK has 361 Red Lions and Greece has 38 Panoramas. In Albania, <strong id="nBarKafe">170</strong> places are called just "Bar Kafe", with nothing else. And <strong id="nBar">1,037</strong> have "bar" somewhere in their name, even when they mostly serve coffee.</p>
+  <ol class="names" id="names"></ol>
+  <p>After that come the chains: Mon Chéri, Mulliri i Vjetër (the old mill) and Sophie. Panorama is here too, with 11, so it has made it across the border. And you can see the Italian influence: <strong id="nItal">456</strong> names have an Italian word in them, and <strong id="nPizza">255</strong> say pizza.</p>
+  <p>The traditional places are fewer on the map than I expected: <strong id="nByrek">169</strong> byrektore, zgara and qebaptore. I'm sure there are many more, they just haven't been mapped yet.</p>
+</section>
+
+<section class="wrap" id="s-three">
+  <h2><small>6 · Three countries</small>UK, Greece and Albania</h2>
+  <p>The three countries don't count in the same way, so this is only a rough comparison. In the UK there's one pub or bar for every 1,827 people. In Greece there's one restaurant, bar or café business for every 140 people. In Albania there's one hotel, restaurant or café business for every <strong id="pp">127</strong> people. So Albania and Greece have more than ten times as many places per person as the UK has pubs.</p>
+  <div class="stats" id="statsThree"></div>
+</section>
+
+<section class="wide" id="s-explore">
+  <div class="wrap" style="padding:0">
+    <h2><small>7 · Explore</small>Find your bar-kafe</h2>
+    <p>Zoom in to find your favourite place, or the ones that are missing. Click a county to see what's on the map and what was counted in 2010.</p>
+  </div>
+  <div class="explorer">
+    <div class="panel">
+      <div class="grp"><b>Dots</b>
+        <label><input type="checkbox" class="kchk" data-k="0" checked> <span class="dot" style="background:var(--kafe)"></span> Bar-kafe</label>
+        <label><input type="checkbox" class="kchk" data-k="1" checked> <span class="dot" style="background:var(--byrek)"></span> Byrektore, zgara, qebaptore</label>
+        <label><input type="checkbox" class="kchk" data-k="2" checked> <span class="dot" style="background:var(--rest)"></span> Restaurants and tavernas</label>
+        <label><input type="checkbox" class="kchk" data-k="3"> <span class="dot" style="background:var(--other)"></span> Pizza and fast food</label>
+      </div>
+      <div class="grp"><b>Colour counties by</b>
+        <select id="mode">
+          <option value="none" selected>Nothing (dots only)</option>
+          <option value="per">Places on the map per person</option>
+          <option value="cov">On the map today against the 2010 count</option>
+        </select>
+        <div id="rampBox"></div>
+      </div>
+      <div id="unitBox"></div>
+    </div>
+    <div id="map" role="application" aria-label="Map of Albanian cafés, restaurants and counties"></div>
+  </div>
+</section>
+</main>
+
+<footer class="wrap">
+  <h3>Data and method</h3>
+  <p><strong>Places:</strong> OpenStreetMap, every amenity=cafe, bar, pub, restaurant and fast_food in Albania, downloaded through Overpass on 21 October 2026. I sorted them by name and tags: byrek, zgara, qebap, sufllaqe, lakror or mëngjezore for the traditional places; cafés, bars and pubs as bar-kafe; restaurants as restaurants unless they say pizza or burger; everything else as pizza and fast food. © OpenStreetMap contributors, ODbL.</p>
+  <p><strong>Official counts:</strong> INSTAT, <a href="https://www.instat.gov.al/en/themes/industry-trade-and-services/structural-business-statistics/">Structural Business Statistics</a> 2016–2024 and <a href="https://www.instat.gov.al/en/themes/industry-trade-and-services/business-registers/">Business Registers</a> 2021–2025 (accommodation and food services), the <a href="https://www.instat.gov.al/en/themes/censuses/economic-enterprises-census/">2010 Economic Enterprises Census</a> (local units by county), and population on 1 January 2026. Counties are NUTS 3 regions (Eurostat, via Nuts2json).</p>
+  <p><strong>Basemap:</strong> Esri World Dark Gray Canvas (© Esri, HERE, Garmin, © OpenStreetMap contributors).</p>
+  <p>Made by Eriola Trungu Impersimi · <a href="https://etymo.co.uk">etymo.co.uk</a> · See also <a href="https://etymo.co.uk/uk-pubs/">the UK pubs</a> and <a href="https://etymo.co.uk/greek-tavernas/">the Greek tavernas</a>. If you enjoyed it, you can <a href="https://buymeacoffee.com/etymo">buy me a coffee</a>, or a kafe. @ET</p>
+</footer>
+
+<div class="tip" id="tip"></div>
+
+<script src="data/facts.js"></script>
+<script src="data/counties.js"></script>
+<script src="data/points.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+const D = window.AL, F = D.facts, P = D.points, U = D.counties.features.map(f => f.properties);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = n => Math.round(n).toLocaleString('en-GB');
+const pct = (x, d=0) => (x*100).toFixed(d) + '%';
+const tip = document.getElementById('tip');
+function showTip(e, html){ tip.innerHTML = html; tip.style.opacity = 1;
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = Math.min(e.clientY + 14, innerHeight - tip.offsetHeight - 8) + 'px'; }
+function hideTip(){ tip.style.opacity = 0; }
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, a, p){ const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+const N = P.lat.length, LAT = new Float64Array(N), LON = new Float64Array(N);
+for (let i = 0; i < N; i++){ LAT[i] = P.lat[i] / 1e5; LON[i] = P.lon[i] / 1e5; }
+const KC = ['--kafe', '--byrek', '--rest', '--other'].map(css);
+const K = F.kinds;
+
+/* hero */
+function drawHero(){
+  const c = document.getElementById('heroCanvas'), r = c.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = r.width * dpr; c.height = r.height * dpr;
+  const g = c.getContext('2d'); g.scale(dpr, dpr);
+  g.fillStyle = css('--bg'); g.fillRect(0, 0, r.width, r.height);
+  const k = Math.cos(41.2 * Math.PI / 180), x0 = 19.2 * k, x1 = 21.2 * k, y0 = 39.6, y1 = 42.7;
+  const narrow = r.width < 700;
+  const availW = narrow ? r.width * 0.9 : Math.min(r.width * 0.5, 560), availH = r.height * (narrow ? 0.6 : 0.9);
+  const s = Math.min(availW / (x1 - x0), availH / (y1 - y0));
+  const ox = narrow ? (r.width - (x1 - x0) * s) / 2 : r.width - (x1 - x0) * s - Math.max(16, (r.width - 1100) / 2) - 40;
+  const oy = narrow ? r.height - (y1 - y0) * s - 10 : (r.height - (y1 - y0) * s) / 2;
+  const rad = Math.max(0.9, s / 230);
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < N; i++){
+    const kk = P.k[i];
+    g.fillStyle = kk === 0 ? 'rgba(244,181,68,0.85)' : kk === 1 ? 'rgba(212,80,122,0.95)' : kk === 2 ? 'rgba(63,143,217,0.75)' : 'rgba(170,170,185,0.35)';
+    const x = ox + (LON[i] * k - x0) * s, y = oy + (y1 - LAT[i]) * s;
+    g.beginPath(); g.arc(x, y, rad, 0, 6.283); g.fill();
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+drawHero(); let rh; addEventListener('resize', () => { clearTimeout(rh); rh = setTimeout(drawHero, 150); });
+document.getElementById('hKafe').textContent = fmt(K.kafe);
+document.getElementById('hByrek').textContent = fmt(K.byrek);
+document.getElementById('hRest').textContent = fmt(K.restorant);
+document.getElementById('nOsm').textContent = fmt(F.n);
+document.getElementById('stats1').innerHTML = [[fmt(K.kafe), 'bar-kafe'], [fmt(K.restorant), 'restaurants and tavernas'], [fmt(K.byrek), 'byrektore, zgara and qebaptore'], [fmt(K.pizza), 'pizza and fast food']]
+  .map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('');
+
+/* national chart */
+(function(){
+  const svg = document.getElementById('chartNat'), W = 680, H = 290, m = {l: 52, r: 86, t: 16, b: 28}, iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const A = {}, B = {}; F.national.sbs.forEach(r => A[r.year] = r.enterprises); F.national.register.forEach(r => B[r.year] = r.active_legal_units);
+  const S = [{name: 'Enterprises (business survey)', d: A, c: css('--kafe')}, {name: 'Active legal units (business register)', d: B, c: css('--rest')}];
+  const y0 = 2016, y1 = 2025, xs = y => m.l + (y - y0) / (y1 - y0) * iw, max = 25000, ys = v => m.t + ih - v / max * ih;
+  el('rect', {x: xs(2020), y: m.t, width: xs(2021.5) - xs(2020), height: ih, fill: '#fff', 'fill-opacity': .04}, svg);
+  el('text', {x: xs(2020) + 4, y: m.t + 12}, svg).textContent = 'COVID';
+  for (let v = 0; v <= max; v += 5000){ el('line', {x1: m.l, x2: m.l + iw, y1: ys(v), y2: ys(v), class: 'grid'}, svg);
+    el('text', {x: m.l - 8, y: ys(v) + 4, 'text-anchor': 'end'}, svg).textContent = v ? (v / 1000) + 'k' : '0'; }
+  for (let y = y0; y <= y1; y += 1) if (y % 2 === 0 || y === y1) el('text', {x: xs(y), y: H - 8, 'text-anchor': 'middle'}, svg).textContent = y;
+  document.getElementById('legNat').innerHTML = S.map(s => `<span><i style="background:${s.c}"></i>${s.name}</span>`).join('');
+  S.forEach(s => {
+    const yrs = Object.keys(s.d).map(Number).sort(), pts = yrs.map(y => [xs(y), ys(s.d[y])]);
+    el('path', {d: 'M' + pts.map(p => p.join(',')).join('L'), fill: 'none', stroke: s.c, 'stroke-width': 2}, svg);
+    pts.forEach(p => el('circle', {cx: p[0], cy: p[1], r: 3, fill: s.c}, svg));
+    const l = pts[pts.length - 1]; el('text', {x: l[0] + 8, y: l[1] + (s.d === A ? 12 : -4), class: 'lbl'}, svg).textContent = fmt(s.d[yrs[yrs.length - 1]]);
+  });
+  const cross = el('line', {y1: m.t, y2: m.t + ih, stroke: css('--ink-3'), opacity: 0}, svg);
+  const hit = el('rect', {x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent'}, svg);
+  hit.addEventListener('mousemove', e => { const b = svg.getBoundingClientRect(), px = (e.clientX - b.left) / b.width * W;
+    const y = Math.max(y0, Math.min(y1, Math.round(y0 + (px - m.l) / iw * (y1 - y0))));
+    cross.setAttribute('x1', xs(y)); cross.setAttribute('x2', xs(y)); cross.setAttribute('opacity', 1);
+    showTip(e, `<b>${y}</b><br>` + S.map(s => `${s.name}: <b>${s.d[y] ? fmt(s.d[y]) : '–'}</b>`).join('<br>')); });
+  hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); hideTip(); });
+  document.getElementById('e16').textContent = fmt(A[2016]); document.getElementById('e21').textContent = fmt(A[2021]); document.getElementById('r25').textContent = fmt(B[2025]);
+})();
+
+/* coverage chart */
+(function(){
+  const rows = U.slice().sort((a, b) => b.cov2010 - a.cov2010), svg = document.getElementById('chartCov');
+  const W = innerWidth < 600 ? 440 : 680, rh = 22, m = {l: 110, r: 50, t: 22};
+  svg.setAttribute('viewBox', `0 0 ${W} ${m.t + rows.length * rh + 8}`);
+  const xs = v => m.l + v / 1.6 * (W - m.l - m.r);
+  [0, 0.5, 1, 1.5].forEach(v => { el('line', {x1: xs(v), x2: xs(v), y1: m.t - 6, y2: m.t + rows.length * rh, class: 'grid', 'stroke-width': v === 1 ? 1.5 : 1}, svg);
+    el('text', {x: xs(v), y: m.t - 10, 'text-anchor': 'middle'}, svg).textContent = Math.round(v * 100) + '%'; });
+  rows.forEach((p, i) => {
+    const y = m.t + i * rh + rh / 2;
+    el('text', {x: m.l - 8, y: y + 4, 'text-anchor': 'end', class: 'lbl'}, svg).textContent = p.county;
+    el('line', {x1: xs(0), x2: xs(p.cov2010), y1: y, y2: y, stroke: css('--rule'), 'stroke-width': 2}, svg);
+    el('circle', {cx: xs(p.cov2010), cy: y, r: 5, fill: css('--glow'), stroke: css('--bg'), 'stroke-width': 2}, svg);
+    el('text', {x: xs(p.cov2010) + 10, y: y + 4}, svg).textContent = pct(p.cov2010);
+    const hit = el('rect', {x: 0, y: y - rh / 2, width: W, height: rh, fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', e => showTip(e, `<b>${p.county}</b><br>On the map today: ${fmt(p.osm_all)}<br>Counted in 2010: ${fmt(p.hcr2010)}`));
+    hit.addEventListener('mouseleave', hideTip);
+  });
+})();
+
+/* names */
+document.getElementById('nBarKafe').textContent = fmt(F.chains['Bar Kafe (just that)']);
+document.getElementById('nBar').textContent = fmt(F.bar_in_name);
+document.getElementById('nItal').textContent = fmt(F.italian_names);
+document.getElementById('nPizza').textContent = fmt(F.pizza_names);
+document.getElementById('nByrek').textContent = fmt(K.byrek);
+const NAMES = [['Bar Kafe', 'just that, nothing else', F.chains['Bar Kafe (just that)']], ['Mon Chéri', 'a chain', F.chains['Mon Chéri']], ['Mulliri i Vjetër', 'the old mill, a coffee chain', F.chains['Mulliri i Vjetër']],
+  ['Sophie', 'a chain', F.chains['Sophie Caffè']], ['Panorama', 'the view, like in Greece', 11], ['Mëngjezore', 'the breakfast place', 11], ['Friends', '', 10], ['Piazza', 'the square, in Italian', 10]];
+document.getElementById('names').innerHTML = NAMES.map(r => `<li><span><span class="nm">${r[0]}</span>${r[1] ? `<span class="sub">${r[1]}</span>` : ''}</span><span class="n">${r[2]}</span></li>`).join('');
+
+/* three countries */
+const pp = F.pop2026 / F.national.register.find(r => r.year === 2025).active_legal_units;
+document.getElementById('pp').textContent = fmt(pp);
+document.getElementById('statsThree').innerHTML = [['1,827', 'people per pub or bar, UK'], ['140', 'people per restaurant, bar or café business, Greece'], [fmt(pp), 'people per hotel, restaurant or café business, Albania']]
+  .map(s => `<div class="stat"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('');
+
+/* map */
+const map = L.map('map', {preferCanvas: true, zoomSnap: 0.5, minZoom: 6, maxZoom: 18}).setView([41.15, 20.05], 7.5);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {maxZoom: 18, maxNativeZoom: 16,
+  attribution: 'Basemap © Esri, HERE, Garmin · Places © OpenStreetMap contributors · Counts: INSTAT'}).addTo(map);
+map.createPane('labels'); map.getPane('labels').style.zIndex = 450; map.getPane('labels').style.pointerEvents = 'none';
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {maxZoom: 18, maxNativeZoom: 16, pane: 'labels'}).addTo(map);
+map.createPane('units'); map.getPane('units').style.zIndex = 350;
+const SEQ = ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5'].map(css);
+const bin = (v, br) => SEQ[br.filter(b => v >= b).length];
+let mode = 'none';
+function fill(p){ return mode === 'per' ? bin(p.osm_per10k, [15, 20, 30, 50]) : bin(p.cov2010, [0.35, 0.5, 0.65, 1]); }
+function style(p){ return mode === 'none' ? {fillOpacity: 0, weight: 0.8, color: '#3a3f4a', opacity: .8} : {fillColor: fill(p), fillOpacity: .72, weight: 0.8, color: '#0F1115', opacity: .8}; }
+const units = L.geoJSON(D.counties, {pane: 'units', style: f => style(f.properties), onEachFeature: (f, l) => {
+  l.on('click', () => showUnit(f.properties)); l.on('mouseover', () => l.setStyle({weight: 2, color: css('--ink')})); l.on('mouseout', () => l.setStyle(style(f.properties))); }}).addTo(map);
+function ramp(){
+  const box = document.getElementById('rampBox');
+  if (mode === 'per') box.innerHTML = `<div class="ramp">${SEQ.map(c => `<i style="background:${c}"></i>`).join('')}</div><div class="ramp-l"><span>under 15 per 10,000</span><span>50+</span></div>`;
+  else if (mode === 'cov') box.innerHTML = `<div class="ramp">${SEQ.map(c => `<i style="background:${c}"></i>`).join('')}</div><div class="ramp-l"><span>under 35%</span><span>more than in 2010</span></div>`;
+  else box.innerHTML = '';
+}
+document.getElementById('mode').addEventListener('change', e => { mode = e.target.value; units.setStyle(f => style(f.properties)); ramp(); dots._draw(); });
+function showUnit(p){
+  const b = document.getElementById('unitBox'); b.style.display = 'block';
+  b.innerHTML = `<h4>${p.county}</h4>
+  <div class="row"><span>Bar-kafe on the map</span><b>${fmt(p.kafe)}</b></div>
+  <div class="row"><span>Restaurants</span><b>${fmt(p.restorant)}</b></div>
+  <div class="row"><span>Byrektore, zgara, qebaptore</span><b>${fmt(p.byrek)}</b></div>
+  <div class="row"><span>All places on the map</span><b>${fmt(p.osm_all)}</b></div>
+  <div class="row"><span>Counted in 2010 (incl. hotels)</span><b>${fmt(p.hcr2010)}</b></div>
+  <div class="row"><span>Population 2026</span><b>${fmt(p.pop2026)}</b></div>`;
+}
+const show = [true, true, true, false];
+const DotLayer = L.Layer.extend({
+  onAdd(m){ this._m = m; this._c = L.DomUtil.create('canvas', 'leaflet-zoom-hide'); this._c.style.pointerEvents = 'none'; m.getPanes().overlayPane.appendChild(this._c); m.on('moveend zoomend resize', this._draw, this); this._draw(); },
+  _draw(){
+    const m = this._m, sz = m.getSize(), dpr = Math.min(devicePixelRatio || 1, 2), c = this._c;
+    L.DomUtil.setPosition(c, m.containerPointToLayerPoint([0, 0]));
+    c.width = sz.x * dpr; c.height = sz.y * dpr; c.style.width = sz.x + 'px'; c.style.height = sz.y + 'px';
+    const g = c.getContext('2d'); g.scale(dpr, dpr);
+    const b = m.getBounds().pad(0.05), z = m.getZoom(), r = z < 9 ? 2 : z < 12 ? 3 : z < 14 ? 4 : 5.5;
+    g.strokeStyle = '#0F1115'; g.lineWidth = 1;
+    for (let i = 0; i < N; i++){
+      const k = P.k[i]; if (!show[k]) continue;
+      const la = LAT[i], lo = LON[i];
+      if (la < b._southWest.lat || la > b._northEast.lat || lo < b._southWest.lng || lo > b._northEast.lng) continue;
+      const pt = m.latLngToContainerPoint([la, lo]);
+      g.fillStyle = KC[k]; g.globalAlpha = k === 3 ? 0.6 : 0.95;
+      g.beginPath(); g.arc(pt.x, pt.y, r, 0, 6.283); g.fill(); if (z >= 10 || mode !== 'none') g.stroke();
+    }
+  }
+});
+const dots = new DotLayer().addTo(map);
+document.querySelectorAll('.kchk').forEach(c => c.addEventListener('change', e => { show[+e.target.dataset.k] = e.target.checked; dots._draw(); }));
+const KN = ['Bar-kafe', 'Byrektore / zgara / qebaptore', 'Restaurant', 'Pizza / fast food'];
+map.on('click', e => {
+  if (map.getZoom() < 10) return;
+  let best = -1, bd = 1e9; const pt = map.latLngToContainerPoint(e.latlng);
+  for (let i = 0; i < N; i++){ if (!show[P.k[i]]) continue; if (Math.abs(LAT[i] - e.latlng.lat) > 0.03 || Math.abs(LON[i] - e.latlng.lng) > 0.04) continue;
+    const q = map.latLngToContainerPoint([LAT[i], LON[i]]), d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < bd){ bd = d; best = i; } }
+  if (best >= 0 && bd < 12) L.popup().setLatLng([LAT[best], LON[best]]).setContent(`<b>${P.n[best] || '<i>No name</i>'}</b>${P.c[best] ? '<br>' + P.c[best] : ''}<br><span style="color:${KC[P.k[best]]}">${KN[P.k[best]]}</span>`).openOn(map);
+});
+})();
+</script>
+</body>
+</html>
